@@ -30,7 +30,7 @@ class Square extends StatelessWidget {
               ? Image.asset(
                   piece!.imagePath,
                   color: piece!.isWhite ? Colors.white : Colors.black,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fill,
                 )
               : null,
         ),

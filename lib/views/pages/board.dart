@@ -6,6 +6,10 @@ import 'package:quoridor_game/views/pages/square.dart';
 const int boardRow = 9;
 const int boardCol = 9;
 
+const int myInitRow = 8;
+const int oppInitRow = 0;
+const int initCol = 4;
+
 class Board extends StatefulWidget {
   const Board({super.key});
 
@@ -17,16 +21,16 @@ class _BoardState extends State<Board> {
   Pawn myPawn = Pawn(
     isWhite: true,
     imagePath: 'assets/images/pawn.png',
-    currRow: 8,
-    currCol: 4,
+    currRow: myInitRow,
+    currCol: initCol,
   );
   Pawn oppPawn = Pawn(
     isWhite: false,
     imagePath: 'assets/images/pawn.png',
-    currRow: 0,
-    currCol: 4,
+    currRow: oppInitRow,
+    currCol: initCol,
   );
-  Map<int, List<int>> get validMoves => createInitialValidMoves();
+  late Map<int, List<int>> validMoves = createInitialValidMoves();
 
   int selectedRow = -1;
   int selectedCol = -1;
@@ -74,7 +78,85 @@ class _BoardState extends State<Board> {
     return moves;
   }
 
+  void _showDialog(String winner) {
+
+    final Color dialogBgColor = const Color(0xFFF8E7BB); // Light Beige/Cream
+    final Color buttonColor = const Color(0xFF8D6E63);   // Brown (matches squares)
+    final Color textColor = const Color(0xFF5D4037);     // Darker Brown for text
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent clicking outside to close
+      builder: (context) {
+        return AlertDialog(
+          // Rounded corners for a softer, modern feel
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: dialogBgColor,
+          
+          // Centered Title with distinct styling
+          title: Column(
+            children: [
+              const Icon(Icons.emoji_events_rounded, size: 50, color: Colors.orange),
+              const SizedBox(height: 10),
+              Text(
+                '$winner Won!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Roboto', // Or your app's custom font
+                ),
+              ),
+            ],
+          ),
+          
+          // Center the actions at the bottom
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.only(bottom: 20, top: 10),
+          
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  // Reset Game Logic
+                  validMoves = createInitialValidMoves();
+                  
+                  // Assuming you have variables for initial positions
+                  // Make sure these variables (myInitRow, etc.) are accessible here
+                  myPawn.currRow = myInitRow;
+                  myPawn.currCol = initCol;
+                  oppPawn.currRow = oppInitRow;
+                  oppPawn.currCol = initCol;
+                });
+              },
+              // Styling the button to pop against the beige background
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor, // The brown square color
+                foregroundColor: Colors.white, // White text/icon
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 5, // Slight shadow for depth
+              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text(
+                'Restart Game',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+}
+
   void checkIfSelected(int row, int col) {
+    int index = row * boardRow + col;
     setState(() {
       if (row == myPawn.currRow && col == myPawn.currCol) {
         selectedRow = row;
@@ -82,6 +164,32 @@ class _BoardState extends State<Board> {
       } else if (row == oppPawn.currRow && col == oppPawn.currCol) {
         selectedRow = row;
         selectedCol = col;
+      }
+
+      if ((validMoves[selectedRow * boardRow + selectedCol] == null
+          ? false
+          : validMoves[selectedRow * boardRow + selectedCol]!.contains(index) &&
+                myPawn.currRow == selectedRow &&
+                myPawn.currCol == selectedCol)) {
+        myPawn.currRow = row;
+        myPawn.currCol = col;
+        selectedRow = -1;
+        selectedCol = -1;
+      } else if ((validMoves[selectedRow * boardRow + selectedCol] == null
+          ? false
+          : validMoves[selectedRow * boardRow + selectedCol]!.contains(index) &&
+                oppPawn.currRow == selectedRow &&
+                oppPawn.currCol == selectedCol)) {
+        oppPawn.currRow = row;
+        oppPawn.currCol = col;
+        selectedRow = -1;
+        selectedCol = -1;
+      }
+
+      if (myPawn.currRow == oppInitRow) {
+        _showDialog('You');
+      } else if (oppPawn.currRow == myInitRow) {
+        _showDialog('Opponent');
       }
     });
   }
@@ -111,7 +219,6 @@ class _BoardState extends State<Board> {
               [row, col] = calculateRowCol(index, boardRow);
               bool isSelected = (selectedRow == row) && (selectedCol == col);
               bool isValidMove = false;
-              //TODO:implement a way to light up available moves for a selected pawn
 
               if (row == myPawn.currRow && col == myPawn.currCol) {
                 return Square(
@@ -128,6 +235,11 @@ class _BoardState extends State<Board> {
                   onTapFunc: () => checkIfSelected(row, col),
                 );
               } else {
+                isValidMove =
+                    validMoves[selectedRow * boardRow + selectedCol] == null
+                    ? false
+                    : validMoves[selectedRow * boardRow + selectedCol]!
+                          .contains(index);
                 return Square(
                   piece: null,
                   isSelected: isSelected,
