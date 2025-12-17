@@ -20,8 +20,6 @@ class Square extends StatelessWidget {
       onTap: onTapFunc,
       child: Center(
         child: Container(
-          padding: EdgeInsets.all(4.0),
-          margin: EdgeInsets.all(4.0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(2.0)),
             color: (isSelected || isValidMove)?Colors.orange[600]: const Color.fromARGB(255, 195, 138, 118),
