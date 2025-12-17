@@ -311,7 +311,7 @@ class _BoardState extends State<Board> {
           backgroundColor: Color.fromARGB(255, 242, 154, 154),
           content: Center(
             child: Text(
-              'Move not allowed',
+              'Move NOT Allowed',
               style: TextStyle(
                 fontSize: 40,
                 fontWeight: FontWeight.w700,
