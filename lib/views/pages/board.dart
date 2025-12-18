@@ -1,7 +1,7 @@
-import 'dart:collection';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:quoridor_game/game_logic/computer_player.dart';
+import 'package:quoridor_game/game_logic/human_player.dart';
+import 'package:quoridor_game/game_logic/player.dart';
 import 'package:quoridor_game/helper/helper_func.dart';
 import 'package:quoridor_game/views/pages/pawn.dart';
 import 'package:quoridor_game/views/pages/scoreboard_walls.dart';
@@ -20,13 +20,16 @@ const String myWallColor = 'r';
 const String oppWallColor = 'b';
 
 class Board extends StatefulWidget {
-  const Board({super.key});
+  final bool isOppHuman;
+  const Board({super.key, required this.isOppHuman});
 
   @override
-  State<Board> createState() => _BoardState();
+  // ignore: no_logic_in_create_state
+  State<Board> createState() => _BoardState(isOppHuman);
 }
 
 class _BoardState extends State<Board> {
+  bool isOppHuman;
   Pawn myPawn = Pawn(
     isWhite: true,
     imagePath: 'assets/images/pawn.png',
@@ -40,42 +43,42 @@ class _BoardState extends State<Board> {
     currCol: initCol,
   );
 
-  int myNumOfWalls = 10;
-  int oppNumOfWalls = 10;
-  bool isMyTurn =
-      true; // when isMyTurn is true i can either move the white pawn or add a wall
+  bool isMyTurn = true; // when isMyTurn is true i can either move the white pawn or add a wall
 
   late Map<int, List<int>> validMoves = createInitialValidMoves();
   Map<int, String> wallPos = {};
 
-  int selectedRow = -1;
-  int selectedCol = -1;
+  late Player player1 = HumanPlayer(
+    pawn: myPawn,
+    validMoves: validMoves,
+    wallPos: wallPos,
+    wallColor: myWallColor,
+    myInitRow: myInitRow,
+    oppInitRow: oppInitRow,
+  );
 
-  int prevSelectedWall = -1;
+  late Player player2 = isOppHuman
+      ? HumanPlayer(
+          pawn: oppPawn,
+          validMoves: validMoves,
+          wallPos: wallPos,
+          wallColor: oppWallColor,
+          myInitRow: oppInitRow,
+          oppInitRow: myInitRow,
+        )
+      : ComputerPlayer(
+          pawn: oppPawn,
+          validMoves: validMoves,
+          wallPos: wallPos,
+          wallColor: oppWallColor,
+          myInitRow: oppInitRow,
+          oppInitRow: myInitRow,
+        );
 
-  bool bfs(int startVertex, int targetRow) {
-    Queue<int> tempQueue = Queue<int>();
-    Set<int> visitedNodes = {};
-    tempQueue.add(startVertex);
-    int row;
+  late Player currentPlayer = player1;
 
-    while (tempQueue.isNotEmpty) {
-      int currentVertex = tempQueue.first;
-      tempQueue.removeFirst();
-      visitedNodes.add(currentVertex);
-      final rowCol = calculateRowCol(currentVertex, boardRow);
-      row = rowCol[0];
-      if (row == targetRow) {
-        return true;
-      }
-
-      for (int ver in validMoves[currentVertex]!) {
-        if (!visitedNodes.contains(ver)) {
-          tempQueue.add(ver);
-        }
-      }
-    }
-    return false;
+  _BoardState(this.isOppHuman) {
+    resetGame();
   }
 
   /// Populates the validMoves map with initial orthogonal connections
@@ -124,22 +127,21 @@ class _BoardState extends State<Board> {
   }
 
   void resetGame() {
-    setState(() {
-      // Reset Game Logic
-      validMoves = createInitialValidMoves();
-      myNumOfWalls = 10;
-      oppNumOfWalls = 10;
-      isMyTurn = true;
-      wallPos = {};
+    // Reset Game Logic
+    validMoves = createInitialValidMoves();
+    player1.numOfWalls = 10;
+    player2.numOfWalls = 10;
+    isMyTurn = true;
+    wallPos = {};
 
-      // Assuming you have variables for initial positions
-      // Make sure these variables (myInitRow, etc.) are accessible here
-      myPawn.currRow = myInitRow;
-      myPawn.currCol = initCol;
-      oppPawn.currRow = oppInitRow;
-      oppPawn.currCol = initCol;
-    });
+    // Assuming you have variables for initial positions
+    // Make sure these variables (myInitRow, etc.) are accessible here
+    player1.pawn.currRow = myInitRow;
+    player1.pawn.currCol = initCol;
+    player2.pawn.currRow = oppInitRow;
+    player2.pawn.currCol = initCol;
   }
+
 
   void _showDialog(String winner) {
     final Color dialogBgColor = const Color(0xFFF8E7BB); // Light Beige/Cream
@@ -189,7 +191,9 @@ class _BoardState extends State<Board> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                resetGame();
+                setState(() {
+                  resetGame();
+                });
               },
               // Styling the button to pop against the beige background
               style: ElevatedButton.styleFrom(
@@ -216,93 +220,6 @@ class _BoardState extends State<Board> {
     );
   }
 
-  void checkIfSelected(int row, int col) {
-    int index = row * boardRow + col;
-    setState(() {
-      if (row == myPawn.currRow && col == myPawn.currCol && isMyTurn) {
-        selectedRow = row;
-        selectedCol = col;
-      } else if (row == oppPawn.currRow &&
-          col == oppPawn.currCol &&
-          !isMyTurn) {
-        selectedRow = row;
-        selectedCol = col;
-      }
-
-      if ((validMoves[selectedRow * boardRow + selectedCol] == null
-              ? false
-              : validMoves[selectedRow * boardRow + selectedCol]!.contains(
-                      index,
-                    ) &&
-                    myPawn.currRow == selectedRow &&
-                    myPawn.currCol == selectedCol) &&
-          isMyTurn) {
-        isMyTurn = false;
-        myPawn.currRow = row;
-        myPawn.currCol = col;
-        selectedRow = -1;
-        selectedCol = -1;
-      } else if ((validMoves[selectedRow * boardRow + selectedCol] == null
-              ? false
-              : validMoves[selectedRow * boardRow + selectedCol]!.contains(
-                      index,
-                    ) &&
-                    oppPawn.currRow == selectedRow &&
-                    oppPawn.currCol == selectedCol) &&
-          !isMyTurn) {
-        oppPawn.currRow = row;
-        oppPawn.currCol = col;
-        selectedRow = -1;
-        selectedCol = -1;
-        isMyTurn = true;
-      }
-
-      if (myPawn.currRow == oppInitRow) {
-        _showDialog('You');
-      } else if (oppPawn.currRow == myInitRow) {
-        _showDialog('Opponent');
-      }
-    });
-  }
-
-  void addingWallEffect(
-    int firstWall,
-    int secondWall,
-    int middleWall,
-    int offset,
-  ) {
-    validMoves[firstWall - offset]!.remove(firstWall + offset);
-    validMoves[firstWall + offset]!.remove(firstWall - offset);
-
-    validMoves[secondWall - offset]!.remove(secondWall + offset);
-    validMoves[secondWall + offset]!.remove(secondWall - offset);
-
-    if (!bfs((myPawn.currRow) * boardRow + myPawn.currCol, oppInitRow)
-    || !bfs((oppPawn.currRow) * boardRow + oppPawn.currCol, myInitRow)) {
-      validMoves[firstWall - offset]!.add(firstWall + offset);
-      validMoves[firstWall + offset]!.add(firstWall - offset);
-
-      validMoves[secondWall - offset]!.add(secondWall + offset);
-      validMoves[secondWall + offset]!.add(secondWall - offset);
-      prevSelectedWall = -1;
-      _showMoveNotAllowedMessage();
-      return;
-    }
-    wallPos[firstWall] = isMyTurn ? myWallColor : oppWallColor;
-    wallPos[secondWall] = isMyTurn ? myWallColor : oppWallColor;
-    wallPos[middleWall] = isMyTurn ? myWallColor : oppWallColor;
-
-    if (isMyTurn) {
-      myNumOfWalls--;
-    } else {
-      oppNumOfWalls--;
-    }
-
-    isMyTurn = !isMyTurn;
-    selectedRow = -1;
-    selectedCol = -1;
-  }
-
   void _showMoveNotAllowedMessage() {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -324,49 +241,29 @@ class _BoardState extends State<Board> {
       );
   }
 
-  void addWallsToList(int firstWall, int secondWall, bool isRow) {
-    int minWall = min(firstWall, secondWall);
-    int middleWall = isRow ? (minWall + 1) : (minWall + boardRow);
-    int middleWallRow = 0;
-    int middleWallCol = 0;
-    [middleWallRow, middleWallCol] = calculateRowCol(middleWall, boardRow);
+  bool _handleTap(int row, int col) {
+      final current = isMyTurn ? player1 : player2;
+      final other = isMyTurn ? player2 : player1;
+      bool didAct = true;
+      setState(() {
+        didAct = current.play(row, col, other.pawn.currRow, other.pawn.currCol);
+      });
 
-    if (!(middleWallRow % 2 == 1 && middleWallCol % 2 == 1)) {
-      return;
-    }
-
-    setState(() {
-      if ((isMyTurn && myNumOfWalls > 0) || (!isMyTurn && oppNumOfWalls > 0)) {
-        if (isRow && (!wallPos.containsKey(middleWall))) {
-          addingWallEffect(firstWall, secondWall, middleWall, boardRow);
-        } else if (!wallPos.containsKey(middleWall)) {
-          addingWallEffect(firstWall, secondWall, middleWall, 1);
-        }
+      if (!didAct) {
+        _showMoveNotAllowedMessage();
+        return false;
       }
-    });
-  }
 
-  void checkIfWallIsSelected(int row, int col) {
-    int currentWallIndex = row * boardRow + col;
-    //check if it is not a connection between a wall (1,1)
-    if ((row % 2 != col % 2)) {
-      if (prevSelectedWall == -1) {
-        setState(() {
-          prevSelectedWall = row * boardRow + col;
-        });
-      } else {
-        //consectuive in col
-        if ((prevSelectedWall - currentWallIndex).abs() == 2) {
-          addWallsToList(prevSelectedWall, currentWallIndex, true);
-        } else if ((prevSelectedWall - currentWallIndex).abs() == 34) {
-          addWallsToList(prevSelectedWall, currentWallIndex, false);
-        }
+      final bool currentWon =
+          current == player1 ? current.pawn.currRow == other.myInitRow : current.pawn.currRow == other.myInitRow;
 
-        setState(() {
-          prevSelectedWall = -1;
-        });
+      if (currentWon) {
+        _showDialog(current == player1 ? 'White' : 'Black');
+        return true;
       }
-    }
+
+      setState(() => isMyTurn = !isMyTurn);
+      return true;
   }
 
   @override
@@ -399,46 +296,26 @@ class _BoardState extends State<Board> {
                 itemBuilder: (context, index) {
                   int row = 0;
                   int col = 0;
-                  [row, col] = calculateRowCol(index, boardRow);
-                  bool isSelected =
-                      (selectedRow == row) && (selectedCol == col);
-                  bool isValidMove = false;
+                  [row, col] = calculateRowCol(index, boardSize: boardRow);
+                  if(row == player1.pawn.currRow && col == player1.pawn.currCol) {
+                    currentPlayer = player1;
+                  }
+                  else if(row == player2.pawn.currRow && col == player2.pawn.currCol) {
+                    currentPlayer = player2;
+                  }
+                  bool isValidMove = validMoves[currentPlayer.pawn.currRow * boardRow + currentPlayer.pawn.currCol]!.contains(index);
+
                   if (row % 2 == 1 || col % 2 == 1) {
                     return Wall(
                       isWallSelected: wallPos.containsKey(index),
-                      onTapFunc: () => checkIfWallIsSelected(row, col),
+                      onTapFunc: () => _handleTap(row, col),
                       wallColortxt: wallPos[index],
                     );
                   } else {
-                    if (row == myPawn.currRow && col == myPawn.currCol) {
-                      return Square(
-                        piece: myPawn,
-                        isSelected: isSelected,
-                        isValidMove: isValidMove,
-                        onTapFunc: () => checkIfSelected(row, col),
-                      );
-                    } else if (row == oppPawn.currRow &&
-                        col == oppPawn.currCol) {
-                      return Square(
-                        piece: oppPawn,
-                        isSelected: isSelected,
-                        isValidMove: isValidMove,
-                        onTapFunc: () => checkIfSelected(row, col),
-                      );
-                    } else {
-                      isValidMove =
-                          validMoves[selectedRow * boardRow + selectedCol] ==
-                              null
-                          ? false
-                          : validMoves[selectedRow * boardRow + selectedCol]!
-                                .contains(index);
-                      return Square(
-                        piece: null,
-                        isSelected: isSelected,
-                        isValidMove: isValidMove,
-                        onTapFunc: () => checkIfSelected(row, col),
-                      );
-                    }
+                    return Square(
+                      piece: ((row == currentPlayer.pawn.currRow) && (col == currentPlayer.pawn.currCol)) ? currentPlayer.pawn : null,
+                      onTapFunc: () => _handleTap(row, col), isValidMove: isValidMove,
+                    );
                   }
                 },
                 staggeredTileBuilder: (int index) {
@@ -446,7 +323,7 @@ class _BoardState extends State<Board> {
                   // (This assumes you know the total columns is 17)
                   int row = 0;
                   int col = 0;
-                  [row, col] = calculateRowCol(index, boardRow);
+                  [row, col] = calculateRowCol(index, boardSize: boardRow);
 
                   // 2. Decide size based on row/col parity
                   bool isSquareRow = row % 2 == 0;
@@ -467,8 +344,8 @@ class _BoardState extends State<Board> {
             ),
           ),
           ScoreboardWalls(
-            myNumOfWalls: myNumOfWalls,
-            oppNumOfWalls: oppNumOfWalls,
+            myNumOfWalls: player1.numOfWalls,
+            oppNumOfWalls: player2.numOfWalls,
             isMyTurn: isMyTurn,
           ),
         ],

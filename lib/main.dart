@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:quoridor_game/views/widget_tree.dart';
+import 'package:quoridor_game/views/screens/start_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      home: WidgetTree(),
+      home: StartScreen(),
     );
   }
 }

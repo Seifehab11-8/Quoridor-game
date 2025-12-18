@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:quoridor_game/views/pages/board.dart';
 
-class WidgetTree extends StatefulWidget {
-  const WidgetTree({super.key});
+class GameScreen extends StatefulWidget {
+  const GameScreen({super.key});
 
   @override
-  State<WidgetTree> createState() => _WidgetTreeState();
+  State<GameScreen> createState() => _GameScreenState();
 }
 
-class _WidgetTreeState extends State<WidgetTree> {
+class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,7 +23,7 @@ class _WidgetTreeState extends State<WidgetTree> {
             ),
         ),
       ),
-      body: Board(),
+      body: Board(isOppHuman: true,),
     );
   }
 }
