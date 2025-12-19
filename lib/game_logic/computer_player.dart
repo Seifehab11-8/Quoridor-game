@@ -6,8 +6,8 @@ class ComputerPlayer extends Player{
   
   @override
   MoveData play(int row, int col, int oppCurrRow, int oppCurrCol) {
-    // TODO: implement play
-    throw UnimplementedError();
+    pawn.currRow = pawn.currRow + 2;
+    return MoveData.SUCCESSFUL_MOVE;
   }
   
 

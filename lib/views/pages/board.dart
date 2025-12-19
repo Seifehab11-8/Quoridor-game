@@ -31,6 +31,7 @@ class Board extends StatefulWidget {
 
 class _BoardState extends State<Board> {
   bool isOppHuman;
+  bool _isComputerThinking = false;
   Pawn myPawn = Pawn(
     isWhite: true,
     imagePath: 'assets/images/pawn.png',
@@ -245,7 +246,28 @@ class _BoardState extends State<Board> {
       );
   }
 
+  Future<void> updateIfComputer(
+    Player player,
+    int row,
+    int col,
+    int otherRow,
+    int otherCol,
+  ) async {
+    _isComputerThinking = true;
+    await Future.delayed(const Duration(seconds: 2));
+    if (!isOppHuman) {
+      setState(() {
+        player.play(row, col, otherRow, otherCol); // let AI move
+        isMyTurn = true; // back to human
+      });
+    }
+    _isComputerThinking = false;
+  }
+
   void _handleTap(int row, int col) {
+    if (_isComputerThinking) return; // ignore taps while AI moves
+    if (!isMyTurn && !isOppHuman) return; // block human taps on AI turn
+
     final current = isMyTurn ? player1 : player2;
     final other = isMyTurn ? player2 : player1;
     MoveData didAct = MoveData.SUCCESSFUL_MOVE;
@@ -258,21 +280,27 @@ class _BoardState extends State<Board> {
       return;
     }
 
-    final bool currentWon = current == player1
-        ? current.pawn.currRow == other.myInitRow
-        : current.pawn.currRow == other.myInitRow;
-
+    final bool currentWon = current.pawn.currRow == other.myInitRow;
     if (currentWon) {
       _showDialog(current == player1 ? 'White' : 'Black');
       return;
     }
 
-    setState(() {
-
-      if(didAct == MoveData.SUCCESSFUL_MOVE) {
-        isMyTurn = !isMyTurn;
+    if (didAct == MoveData.SUCCESSFUL_MOVE) {
+      if (isOppHuman) {
+        setState(() => isMyTurn = !isMyTurn);
+      } else {
+        // hand turn to computer and wait
+        setState(() => isMyTurn = false);
+        updateIfComputer(
+          other,
+          row,
+          col,
+          current.pawn.currRow,
+          current.pawn.currCol,
+        );
       }
-    });
+    }
   }
 
   @override
@@ -316,10 +344,13 @@ class _BoardState extends State<Board> {
 
                   final player = isMyTurn ? player1 : player2;
 
-                  bool isValidMove = (validMoves[player.selectedRow * boardRow +
-                              player.selectedCol] ?? []).contains(index);
-                          
-                  bool isSelected = 
+                  bool isValidMove =
+                      (validMoves[player.selectedRow * boardRow +
+                                  player.selectedCol] ??
+                              [])
+                          .contains(index);
+
+                  bool isSelected =
                       (row == player.selectedRow) &&
                       (col == player.selectedCol);
 

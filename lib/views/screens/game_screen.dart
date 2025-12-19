@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:quoridor_game/views/pages/board.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final bool isOppHuman;
+  const GameScreen({super.key, required this.isOppHuman});
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  // ignore: no_logic_in_create_state
+  State<GameScreen> createState() => _GameScreenState(isOppHuman);
 }
 
 class _GameScreenState extends State<GameScreen> {
+  final bool isOppHuman;
+
+  _GameScreenState(this.isOppHuman);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,7 +28,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
         ),
       ),
-      body: Board(isOppHuman: true,),
+      body: Board(isOppHuman: isOppHuman,),
     );
   }
 }
