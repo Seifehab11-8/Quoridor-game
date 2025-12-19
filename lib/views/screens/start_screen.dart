@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:quoridor_game/views/screens/game_screen.dart';
 
+const String human = 'Human vs Human';
+const String computer = 'Human vs Computer';
+
 class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
 
@@ -44,9 +47,9 @@ class _StartScreenState extends State<StartScreen> {
                   constraints: const BoxConstraints(minWidth: 220),
                   itemBuilder: (BuildContext context) => [
                     PopupMenuItem<String>(
-                      value: 'Human vs Human',
+                      value: human,
                       child: const Text(
-                        'Human vs Human',
+                        human,
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -56,9 +59,9 @@ class _StartScreenState extends State<StartScreen> {
                       ),
                     ),
                     PopupMenuItem<String>(
-                      value: 'Human vs Computer',
+                      value: computer,
                       child: const Text(
-                        'Human vs Computer',
+                        computer,
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -69,7 +72,7 @@ class _StartScreenState extends State<StartScreen> {
                     ),
                   ],
                   onSelected: (String value) {
-                    bool isOppHuman = value == 'Human v Human';
+                    final bool isOppHuman = (value == human);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
