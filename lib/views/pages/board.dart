@@ -3,6 +3,7 @@ import 'package:quoridor_game/game_logic/computer_player.dart';
 import 'package:quoridor_game/game_logic/human_player.dart';
 import 'package:quoridor_game/game_logic/player.dart';
 import 'package:quoridor_game/helper/helper_func.dart';
+import 'package:quoridor_game/helper/move_data.dart';
 import 'package:quoridor_game/views/pages/pawn.dart';
 import 'package:quoridor_game/views/pages/scoreboard_walls.dart';
 import 'package:quoridor_game/views/pages/square.dart';
@@ -43,7 +44,8 @@ class _BoardState extends State<Board> {
     currCol: initCol,
   );
 
-  bool isMyTurn = true; // when isMyTurn is true i can either move the white pawn or add a wall
+  bool isMyTurn =
+      true; // when isMyTurn is true i can either move the white pawn or add a wall
 
   late Map<int, List<int>> validMoves = createInitialValidMoves();
   Map<int, String> wallPos = {};
@@ -128,11 +130,14 @@ class _BoardState extends State<Board> {
 
   void resetGame() {
     // Reset Game Logic
-    validMoves = createInitialValidMoves();
+    // Keep shared map reference so Player and Board stay in sync
+    validMoves
+      ..clear()
+      ..addAll(createInitialValidMoves());
     player1.numOfWalls = 10;
     player2.numOfWalls = 10;
     isMyTurn = true;
-    wallPos = {};
+    wallPos.clear();
 
     // Assuming you have variables for initial positions
     // Make sure these variables (myInitRow, etc.) are accessible here
@@ -141,7 +146,6 @@ class _BoardState extends State<Board> {
     player2.pawn.currRow = oppInitRow;
     player2.pawn.currCol = initCol;
   }
-
 
   void _showDialog(String winner) {
     final Color dialogBgColor = const Color(0xFFF8E7BB); // Light Beige/Cream
@@ -241,29 +245,34 @@ class _BoardState extends State<Board> {
       );
   }
 
-  bool _handleTap(int row, int col) {
-      final current = isMyTurn ? player1 : player2;
-      final other = isMyTurn ? player2 : player1;
-      bool didAct = true;
-      setState(() {
-        didAct = current.play(row, col, other.pawn.currRow, other.pawn.currCol);
-      });
+  void _handleTap(int row, int col) {
+    final current = isMyTurn ? player1 : player2;
+    final other = isMyTurn ? player2 : player1;
+    MoveData didAct = MoveData.SUCCESSFUL_MOVE;
+    setState(() {
+      didAct = current.play(row, col, other.pawn.currRow, other.pawn.currCol);
+    });
 
-      if (!didAct) {
-        _showMoveNotAllowedMessage();
-        return false;
+    if (didAct == MoveData.INVALID_MOVE) {
+      _showMoveNotAllowedMessage();
+      return;
+    }
+
+    final bool currentWon = current == player1
+        ? current.pawn.currRow == other.myInitRow
+        : current.pawn.currRow == other.myInitRow;
+
+    if (currentWon) {
+      _showDialog(current == player1 ? 'White' : 'Black');
+      return;
+    }
+
+    setState(() {
+
+      if(didAct == MoveData.SUCCESSFUL_MOVE) {
+        isMyTurn = !isMyTurn;
       }
-
-      final bool currentWon =
-          current == player1 ? current.pawn.currRow == other.myInitRow : current.pawn.currRow == other.myInitRow;
-
-      if (currentWon) {
-        _showDialog(current == player1 ? 'White' : 'Black');
-        return true;
-      }
-
-      setState(() => isMyTurn = !isMyTurn);
-      return true;
+    });
   }
 
   @override
@@ -297,13 +306,22 @@ class _BoardState extends State<Board> {
                   int row = 0;
                   int col = 0;
                   [row, col] = calculateRowCol(index, boardSize: boardRow);
-                  if(row == player1.pawn.currRow && col == player1.pawn.currCol) {
+                  if (row == player1.pawn.currRow &&
+                      col == player1.pawn.currCol) {
                     currentPlayer = player1;
-                  }
-                  else if(row == player2.pawn.currRow && col == player2.pawn.currCol) {
+                  } else if (row == player2.pawn.currRow &&
+                      col == player2.pawn.currCol) {
                     currentPlayer = player2;
                   }
-                  bool isValidMove = validMoves[currentPlayer.pawn.currRow * boardRow + currentPlayer.pawn.currCol]!.contains(index);
+
+                  final player = isMyTurn ? player1 : player2;
+
+                  bool isValidMove = (validMoves[player.selectedRow * boardRow +
+                              player.selectedCol] ?? []).contains(index);
+                          
+                  bool isSelected = 
+                      (row == player.selectedRow) &&
+                      (col == player.selectedCol);
 
                   if (row % 2 == 1 || col % 2 == 1) {
                     return Wall(
@@ -313,8 +331,14 @@ class _BoardState extends State<Board> {
                     );
                   } else {
                     return Square(
-                      piece: ((row == currentPlayer.pawn.currRow) && (col == currentPlayer.pawn.currCol)) ? currentPlayer.pawn : null,
-                      onTapFunc: () => _handleTap(row, col), isValidMove: isValidMove,
+                      piece:
+                          ((row == currentPlayer.pawn.currRow) &&
+                              (col == currentPlayer.pawn.currCol))
+                          ? currentPlayer.pawn
+                          : null,
+                      onTapFunc: () => _handleTap(row, col),
+                      isValidMove: isValidMove,
+                      isSelected: isSelected,
                     );
                   }
                 },
