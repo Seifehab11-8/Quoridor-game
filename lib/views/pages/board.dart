@@ -262,6 +262,11 @@ class _BoardState extends State<Board> {
       });
     }
     _isComputerThinking = false;
+    final bool currentWon = player2.pawn.currRow == player1.myInitRow;
+    if (currentWon) {
+      _showDialog(player2 == player1 ? 'White' : 'Black');
+      return;
+    }
   }
 
   void _handleTap(int row, int col) {
@@ -343,12 +348,13 @@ class _BoardState extends State<Board> {
                   }
 
                   final player = isMyTurn ? player1 : player2;
+                  final oppPlayer = isMyTurn ? player2 : player1;
 
                   bool isValidMove =
-                      (validMoves[player.selectedRow * boardRow +
+                      ((validMoves[player.selectedRow * boardRow +
                                   player.selectedCol] ??
                               [])
-                          .contains(index);
+                          .contains(index)) && !(row == oppPlayer.pawn.currRow && col == oppPlayer.pawn.currCol);
 
                   bool isSelected =
                       (row == player.selectedRow) &&
