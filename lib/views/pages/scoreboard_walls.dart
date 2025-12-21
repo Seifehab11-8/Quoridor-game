@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 
+/// Displays remaining walls for each side and whose turn it is.
+/// 
+/// Shows a colored indicator for the active player and wall counts
+/// for both human and opponent.
 class ScoreboardWalls extends StatelessWidget {
+  /// Number of walls remaining for the human player.
   final int myNumOfWalls;
+  
+  /// Number of walls remaining for the opponent.
   final int oppNumOfWalls;
+  
+  /// Whether it's currently the human player's turn.
   final bool isMyTurn;
 
+  /// Creates a scoreboard widget with the given game state.
   const ScoreboardWalls({
     super.key,
     required this.myNumOfWalls,

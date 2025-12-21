@@ -20,7 +20,12 @@ const int initCol = 8;
 const String myWallColor = 'r';
 const String oppWallColor = 'b';
 
+/// Main board widget hosting game state, turn handling, and rendering.
+/// 
+/// Manages the complete game loop including player turns, move validation,
+/// win detection, and UI updates. Creates and coordinates player instances.
 class Board extends StatefulWidget {
+  /// Whether the opponent is human (true) or AI (false).
   final bool isOppHuman;
   const Board({super.key, required this.isOppHuman});
 
@@ -29,8 +34,12 @@ class Board extends StatefulWidget {
   State<Board> createState() => _BoardState(isOppHuman);
 }
 
+/// State for the Board widget managing the live game.
 class _BoardState extends State<Board> {
+  /// Whether the opponent is controlled by a human.
   bool isOppHuman;
+  
+  /// Flag to prevent user input while AI is computing its move.
   bool _isComputerThinking = false;
   Pawn myPawn = Pawn(
     isWhite: true,
@@ -129,9 +138,12 @@ class _BoardState extends State<Board> {
     return moves;
   }
 
+  /// Resets all game state to initial conditions.
+  /// 
+  /// Clears walls, restores wall counts, resets pawn positions,
+  /// and rebuilds the adjacency list. Called on game start and restart.
   void resetGame() {
-    // Reset Game Logic
-    // Keep shared map reference so Player and Board stay in sync
+    // Reset Game Logic while preserving shared references for players.
     validMoves
       ..clear()
       ..addAll(createInitialValidMoves());
@@ -148,6 +160,10 @@ class _BoardState extends State<Board> {
     player2.pawn.currCol = initCol;
   }
 
+  /// Displays a victory dialog with the winner's name and a restart button.
+  /// 
+  /// Parameters:
+  ///   - [winner]: The name of the winning player ("White" or "Black")
   void _showDialog(String winner) {
     final Color dialogBgColor = const Color(0xFFF8E7BB); // Light Beige/Cream
     final Color buttonColor = const Color(
@@ -225,6 +241,7 @@ class _BoardState extends State<Board> {
     );
   }
 
+  /// Shows a brief snackbar indicating an invalid move attempt.
   void _showMoveNotAllowedMessage() {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -246,6 +263,15 @@ class _BoardState extends State<Board> {
       );
   }
 
+  /// Simulates AI "thinking" delay, executes the computer move, and checks for victory.
+  /// 
+  /// Only triggers if the opponent is AI. Introduces a 2-second delay for UX,
+  /// then updates the board state and evaluates win conditions.
+  /// 
+  /// Parameters:
+  ///   - [player]: The AI player making the move
+  ///   - [row], [col]: Coordinates (unused by AI)
+  ///   - [otherRow], [otherCol]: Current position of the other player
   Future<void> updateIfComputer(
     Player player,
     int row,
@@ -253,6 +279,7 @@ class _BoardState extends State<Board> {
     int otherRow,
     int otherCol,
   ) async {
+    // Simulate "thinking" delay, then perform AI move and evaluate win.
     _isComputerThinking = true;
     await Future.delayed(const Duration(seconds: 2));
     if (!isOppHuman) {
@@ -269,7 +296,15 @@ class _BoardState extends State<Board> {
     }
   }
 
+  /// Routes user taps to the active player and manages turn switching.
+  /// 
+  /// Validates moves, updates state, checks for victory, and handles
+  /// turn transitions between human and AI players.
+  /// 
+  /// Parameters:
+  ///   - [row], [col]: The tapped cell coordinates
   void _handleTap(int row, int col) {
+    // Route taps to the correct player, then switch turns or notify errors.
     if (_isComputerThinking) return; // ignore taps while AI moves
     if (!isMyTurn && !isOppHuman) return; // block human taps on AI turn
 
@@ -361,12 +396,14 @@ class _BoardState extends State<Board> {
                       (col == player.selectedCol);
 
                   if (row % 2 == 1 || col % 2 == 1) {
+                    // Edge cell represents a wall segment.
                     return Wall(
                       isWallSelected: wallPos.containsKey(index),
                       onTapFunc: () => _handleTap(row, col),
                       wallColortxt: wallPos[index],
                     );
                   } else {
+                    // Even/even index represents a playable square.
                     return Square(
                       piece:
                           ((row == currentPlayer.pawn.currRow) &&

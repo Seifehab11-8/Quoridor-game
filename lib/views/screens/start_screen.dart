@@ -4,6 +4,10 @@ import 'package:quoridor_game/views/screens/game_screen.dart';
 const String human = 'Human vs Human';
 const String computer = 'Human vs Computer';
 
+/// Entry screen to select opponent type and start a new game.
+/// 
+/// Displays a menu allowing the user to choose between playing
+/// against another human or against the AI.
 class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
 

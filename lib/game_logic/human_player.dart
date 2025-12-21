@@ -2,7 +2,12 @@ import 'package:quoridor_game/game_logic/player.dart';
 import 'package:quoridor_game/helper/game_state.dart';
 import 'package:quoridor_game/helper/move_data.dart';
 
+/// Player implementation that handles human touch/click input.
+/// 
+/// Manages two-tap wall placement and validates pawn movement based on
+/// tapped coordinates and current selection state.
 class HumanPlayer extends Player {
+  /// Previously selected wall segment index (for two-tap wall placement).
   int? prevSelectedWall;
   HumanPlayer({
     required super.pawn,
@@ -15,8 +20,13 @@ class HumanPlayer extends Player {
     prevSelectedWall = -1;
   }
 
+  /// Processes a tap at the given board coordinates.
+  /// 
+  /// Squares (even row and col) trigger pawn selection/movement via [checkIfSelected].
+  /// Walls (mixed parity) trigger wall placement via [checkIfWallIsSelected].
   @override
   MoveData play(int row, int col, int oppCurrRow, int oppCurrCol) {
+    // Squares live on even rows/cols; walls on mixed parity.
     if (row % 2 == 0 && col % 2 == 0) {
       return checkIfSelected(row, col, oppCurrRow, oppCurrCol);
     } else {
@@ -24,6 +34,15 @@ class HumanPlayer extends Player {
     }
   }
 
+  /// Handles taps on playable squares (pawn selection and movement).
+  /// 
+  /// First tap on own pawn selects it and adds special moves if facing opponent.
+  /// Second tap on a valid destination moves the pawn there.
+  /// 
+  /// Returns:
+  ///   - [MoveData.INTERMEDIATE_MOVE] if pawn selected
+  ///   - [MoveData.SUCCESSFUL_MOVE] if pawn moved
+  ///   - [MoveData.INVALID_MOVE] if tap is not allowed
   MoveData checkIfSelected(int row, int col, int oppCurrRow, oppCurrCol) {
     int index = row * boardRow + col;
     if (row == pawn.currRow && col == pawn.currCol) {
@@ -52,6 +71,7 @@ class HumanPlayer extends Player {
                   ) &&
                   pawn.currRow == selectedRow &&
                   pawn.currCol == selectedCol) && !(row == oppCurrRow && col == oppCurrCol)) {
+      // Move pawn if tap hits a reachable square that is not occupied by opponent.
       if(isSpecialAdded) {
         removeSpecialCases(
           GameState(
@@ -82,6 +102,16 @@ class HumanPlayer extends Player {
     return MoveData.INVALID_MOVE;
   }
 
+  /// Handles taps on wall segments (two-tap wall placement).
+  /// 
+  /// First tap selects a wall segment, second tap places the wall if valid.
+  /// Cleans up any special moves before processing wall placement.
+  /// 
+  /// Valid walls must:
+  /// - Connect two segments that are 2 apart (horizontal) or 34 apart (vertical)
+  /// - Not block either player's path to victory
+  /// 
+  /// Returns the result of the wall placement attempt.
   MoveData checkIfWallIsSelected(
     int row,
     int col,
@@ -118,7 +148,7 @@ class HumanPlayer extends Player {
         // First tap just selects a wall segment; not an invalid move yet.
         return MoveData.INTERMEDIATE_MOVE;
       } else {
-        // Create GameState once and reuse it
+        // Build a sandboxed state to validate the wall placement.
         GameState gameState = GameState(
           validMoves: validMoves,
           wallPos: wallPos,

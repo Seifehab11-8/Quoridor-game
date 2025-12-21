@@ -3,6 +3,10 @@ import 'package:quoridor_game/helper/game_state.dart';
 import 'package:quoridor_game/helper/helper_func.dart';
 import 'package:quoridor_game/helper/move_data.dart';
 
+/// AI player that uses minimax with alpha-beta pruning to select moves.
+/// 
+/// Generates all possible successor states (pawn moves and wall placements),
+/// evaluates them using a weighted heuristic, and chooses the best move.
 class ComputerPlayer extends Player {
   ComputerPlayer({
     required super.pawn,
@@ -13,11 +17,20 @@ class ComputerPlayer extends Player {
     required super.oppInitRow,
   });
 
+  /// Computes and executes the best move using minimax search.
+  /// 
+  /// Generates all legal successors, scores each with a shallow minimax,
+  /// then applies the highest-scoring move to the live game state.
+  /// 
+  /// The [row], [col] parameters are ignored (AI doesn't need tap coordinates).
+  /// 
+  /// Returns [MoveData.SUCCESSFUL_MOVE] after executing the chosen move.
   @override
   MoveData play(int row, int col, int oppCurrRow, int oppCurrCol) {
     int oppNumOfWalls =
         10 - (wallPos.values.where((wall) => wall != wallColor).length) ~/ 3;
 
+    // Expand all candidate moves, then score them with shallow minimax.
     final allPossibleMoves = generateAllStates(
       GameState(
         validMoves: deepCopyValidMoves(validMoves),
@@ -60,12 +73,25 @@ class ComputerPlayer extends Player {
     return MoveData.SUCCESSFUL_MOVE;
   }
 
+  /// Recursively evaluates a game state using minimax with alpha-beta pruning.
+  /// 
+  /// Swaps perspective at each level so "my" side always refers to the current mover.
+  /// At leaf nodes (currentLevel > maxLevel), computes a heuristic score.
+  /// 
+  /// Parameters:
+  ///   - [currentGameState]: State to evaluate
+  ///   - [currentLevel]: Current depth in the search tree
+  ///   - [maxLevel]: Maximum search depth
+  ///   - [isMax]: True if maximizing, false if minimizing
+  /// 
+  /// Returns the best [GameState] from this node's subtree with heuristic set.
   GameState minimax(
     GameState currentGameState,
     int currentLevel,
     int maxLevel,
     bool isMax,
   ) {
+    // Swap perspective so the recursive call always treats "my" side as the mover.
     int temp = currentGameState.numOfWalls;
     currentGameState.numOfWalls = currentGameState.oppNumOfWalls;
     currentGameState.oppNumOfWalls = temp;
@@ -124,10 +150,20 @@ class ComputerPlayer extends Player {
     return bestMove;
   }
 
+  /// Generates all legal successor states from the current position.
+  /// 
+  /// Includes:
+  /// - Standard pawn moves in four orthogonal directions
+  /// - Jump and diagonal moves when pawns are facing each other
+  /// - All valid wall placements (horizontal and vertical)
+  /// 
+  /// Each state is a deep clone so modifications don't affect siblings.
+  /// 
+  /// Returns a list of all reachable [GameState] objects.
   List<GameState> generateAllStates(GameState currentState) {
     List<GameState> allPossibleStates = [];
 
-    //Pawn Movements
+    // Pawn movements (including jump/diagonal when pawns face each other)
     int index = currentState.myRow * boardRow + currentState.myCol;
     int oppIndex = currentState.oppRow * boardRow + currentState.oppCol;
 
@@ -198,6 +234,7 @@ class ComputerPlayer extends Player {
 
     for (int i = 1; i < boardRow; i += 2) {
       for (int j = 0; j < boardCol; j += 2) {
+        // Horizontal wall candidate spanning (i,j) to (i,j+2)
         GameState wallPlacementState = currentState.clone();
         MoveData isAllowed = addWallsToList(
           wallPlacementState,
@@ -213,6 +250,7 @@ class ComputerPlayer extends Player {
 
     for (int i = 1; i < boardCol; i += 2) {
       for (int j = 0; j < boardRow; j += 2) {
+        // Vertical wall candidate spanning (j,i) to (j+2,i)
         GameState wallPlacementState = currentState.clone();
         MoveData isAllowed = addWallsToList(
           wallPlacementState,
@@ -229,7 +267,22 @@ class ComputerPlayer extends Player {
     return allPossibleStates;
   }
 
+  /// Computes a weighted heuristic score for the given position.
+  /// 
+  /// Combines three features:
+  /// - Positional lead (row difference)
+  /// - Minimizing distance to own goal
+  /// - Maximizing opponent's distance to their goal
+  /// 
+  /// Higher scores favor the current player.
+  /// 
+  /// Parameters:
+  ///   - [isMax]: Whether this is a maximizing node
+  ///   - [current]: The state to evaluate
+  /// 
+  /// Returns a numeric score (higher is better for the current player).
   double calculateHeuristic(bool isMax, GameState current) {
+    // Weighted mix: positional lead, my shortest path, opponent longest path.
     double hValue = 0;
     int lMyInitRow = isMax ? oppInitRow : myInitRow;
     int lOppInitRow = isMax ? myInitRow : oppInitRow;
